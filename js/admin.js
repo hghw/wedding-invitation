@@ -90,14 +90,98 @@ $(function () {
     }
 
     /* ============================================================
-       PHOTOS  —  IndexedDB (WeddingDB), lưu Blob không qua base64
+       GITHUB API HELPERS
     ============================================================ */
-    var editingPhotoId = null;
+    function getGHConfig() {
+        return {
+            token:  localStorage.getItem('ghToken')  || '',
+            owner:  localStorage.getItem('ghOwner')  || 'hghw',
+            repo:   localStorage.getItem('ghRepo')   || 'wedding-invitation',
+            branch: localStorage.getItem('ghBranch') || 'main'
+        };
+    }
 
-    // Migrate ảnh cũ từ localStorage (nếu có)
-    WeddingDB.migrate().then(function (n) {
-        if (n > 0) { showToast('Đã chuyển ' + n + ' ảnh cũ sang bộ nhớ mới.'); loadPhotos(); }
-    });
+    function ghBase() {
+        var c = getGHConfig();
+        return 'https://api.github.com/repos/' + c.owner + '/' + c.repo + '/contents/';
+    }
+
+    function ghHeaders() {
+        return { 'Authorization': 'token ' + getGHConfig().token, 'Content-Type': 'application/json' };
+    }
+
+    function ghGet(path) {
+        var c = getGHConfig();
+        return fetch(ghBase() + path + '?ref=' + c.branch, { headers: ghHeaders() }).then(function (r) {
+            if (r.status === 404) return null;
+            if (!r.ok) return r.json().then(function (e) { throw new Error(e.message || 'GitHub error ' + r.status); });
+            return r.json();
+        });
+    }
+
+    function ghPut(path, base64, message, sha) {
+        var c = getGHConfig();
+        var body = { message: message, content: base64, branch: c.branch };
+        if (sha) body.sha = sha;
+        return fetch(ghBase() + path, {
+            method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body)
+        }).then(function (r) {
+            if (!r.ok) return r.json().then(function (e) { throw new Error(e.message || 'GitHub error'); });
+            return r.json();
+        });
+    }
+
+    function ghDelete(path, sha, message) {
+        var c = getGHConfig();
+        return fetch(ghBase() + path, {
+            method: 'DELETE', headers: ghHeaders(),
+            body: JSON.stringify({ message: message || 'Delete ' + path, sha: sha, branch: c.branch })
+        }).then(function (r) {
+            if (!r.ok) return r.json().then(function (e) { throw new Error(e.message); });
+            return r.json();
+        });
+    }
+
+    function fileToBase64(file) {
+        return new Promise(function (resolve, reject) {
+            var reader = new FileReader();
+            reader.onload  = function (e) { resolve(e.target.result.split(',')[1]); };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function getPhotosJson() {
+        return ghGet('assets/photos/photos.json').then(function (file) {
+            if (!file) return { list: [], sha: null };
+            var raw  = file.content.replace(/\n/g, '');
+            var json = decodeURIComponent(escape(atob(raw)));
+            var list;
+            try { list = JSON.parse(json); } catch (e) { list = []; }
+            return { list: Array.isArray(list) ? list : [], sha: file.sha };
+        });
+    }
+
+    function savePhotosJson(list, sha) {
+        var content = btoa(unescape(encodeURIComponent(JSON.stringify(list, null, 2))));
+        return ghPut('assets/photos/photos.json', content, 'Update photos.json', sha)
+            .then(function (res) { return res.content.sha; });
+    }
+
+    function rawUrl(filename) {
+        var c = getGHConfig();
+        return 'https://raw.githubusercontent.com/' + c.owner + '/' + c.repo + '/' + c.branch + '/assets/photos/' + encodeURIComponent(filename);
+    }
+
+    function sanitizeFilename(name) {
+        return name.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/_{2,}/g, '_').toLowerCase();
+    }
+
+    /* ============================================================
+       PHOTOS  —  GitHub API, lưu thẳng vào assets/photos/
+    ============================================================ */
+    var photosList    = [];
+    var editingPhotoIdx = null;
 
     /* ---- Upload zone drag-and-drop ---- */
     var $zone = $('#uploadZone');
@@ -119,57 +203,82 @@ $(function () {
 
     function processPhotoFiles(files) {
         if (!files || !files.length) return;
-        var valid = Array.from(files).filter(function (f) { return f.type.startsWith('image/'); });
+        if (!getGHConfig().token) {
+            showToast('Chưa có GitHub Token! Vào Cài Đặt → GitHub Token.', 'warn'); return;
+        }
 
+        var valid = Array.from(files).filter(function (f) { return f.type.startsWith('image/'); });
         if (!valid.length) { showToast('Không có ảnh hợp lệ.', 'warn'); return; }
 
-        var done  = 0;
-        var total = valid.length;
+        var done = 0, total = valid.length;
         $('#uploadProgress').show();
         $('#progressFill').css('width', '0%');
 
-        valid.forEach(function (file) {
-            // File kế thừa Blob — lưu thẳng vào IndexedDB, không cần base64
-            WeddingDB.add({
-                blob:      file,
-                caption:   file.name.replace(/\.[^/.]+$/, ''),
-                name:      file.name,
-                timestamp: Date.now()
+        // Upload tuần tự để tránh race condition khi cập nhật photos.json
+        function uploadNext(idx) {
+            if (idx >= valid.length) {
+                setTimeout(function () { $('#uploadProgress').hide(); }, 500);
+                loadPhotos();
+                showToast('Đã tải lên ' + done + ' ảnh!');
+                return;
+            }
+            var file  = valid[idx];
+            var ts    = Date.now();
+            var ext   = (file.name.split('.').pop() || 'jpg').toLowerCase();
+            var base  = sanitizeFilename(file.name.replace(/\.[^/.]+$/, ''));
+            var fname = base + '_' + ts + '.' + ext;
+
+            fileToBase64(file).then(function (b64) {
+                return ghPut('assets/photos/' + fname, b64, 'Upload photo: ' + fname);
+            }).then(function (res) {
+                var fileSha = res.content.sha;
+                return getPhotosJson().then(function (pj) {
+                    var newList = pj.list.concat([{ src: fname, caption: file.name.replace(/\.[^/.]+$/, ''), sha: fileSha }]);
+                    return savePhotosJson(newList, pj.sha);
+                });
             }).then(function () {
                 done++;
-                $('#progressFill').css('width', Math.round(done / total * 100) + '%');
-                if (done === total) {
-                    setTimeout(function () { $('#uploadProgress').hide(); }, 500);
-                    loadPhotos();
-                    showToast('Đã tải lên ' + done + ' ảnh!');
-                }
+                $('#progressFill').css('width', Math.round((idx + 1) / total * 100) + '%');
+                uploadNext(idx + 1);
             }).catch(function (err) {
-                done++;
-                showToast('Lỗi: ' + (err.message || err), 'warn');
+                showToast('Lỗi upload ' + file.name + ': ' + err.message, 'warn');
+                uploadNext(idx + 1);
             });
-        });
+        }
+
+        uploadNext(0);
     }
 
     /* ---- Hiển thị thư viện ảnh ---- */
     function loadPhotos() {
-        WeddingDB.getAll().then(function (photos) {
+        if (!getGHConfig().token) {
+            $('#photoGrid').html('<p class="empty-msg">Chưa có GitHub Token. Vào <strong>Cài Đặt → GitHub Token</strong> để thiết lập.</p>');
+            $('#photoCount').text('—');
+            return;
+        }
+
+        $('#photoGrid').html('<p class="empty-msg">Đang tải...</p>');
+
+        getPhotosJson().then(function (pj) {
+            photosList = pj.list;
+
             var $grid  = $('#photoGrid').empty();
             var isList = $grid.hasClass('list-mode');
-            $('#photoCount').text(photos.length + ' ảnh');
+            $('#photoCount').text(photosList.length + ' ảnh');
 
-            if (!photos.length) {
+            if (!photosList.length) {
                 $grid.html('<p class="empty-msg">Chưa có ảnh nào. Hãy tải ảnh lên!</p>');
                 return;
             }
 
-            photos.forEach(function (p, seq) {
-                var src    = URL.createObjectURL(p.blob);
-                var badge  = '<span class="photo-order-badge">#' + (seq + 1) + '</span>';
-                var btns   =
+            photosList.forEach(function (p, seq) {
+                var src   = rawUrl(p.src);
+                var badge = '<span class="photo-order-badge">#' + (seq + 1) + '</span>';
+                var btns  =
                     '<div class="photo-overlay">' +
-                    '  <button class="btn-view" data-id="' + p.id + '" title="Xem / Sửa"><i class="fas fa-eye"></i></button>' +
-                    '  <button class="btn-dl"   data-id="' + p.id + '" title="Tải xuống"><i class="fas fa-download"></i></button>' +
-                    '  <button class="btn-del"  data-id="' + p.id + '" title="Xóa ảnh"><i class="fas fa-trash"></i></button>' +
+                    '  <button class="btn-view" data-idx="' + seq + '" title="Xem / Sửa"><i class="fas fa-eye"></i></button>' +
+                    '  <button class="btn-dl"   data-idx="' + seq + '" title="Tải xuống"><i class="fas fa-download"></i></button>' +
+                    '  <button class="btn-del"  data-idx="' + seq + '" title="Xóa ảnh"><i class="fas fa-trash"></i></button>' +
                     '</div>';
 
                 var $item = $('<div class="photo-item">');
@@ -192,35 +301,48 @@ $(function () {
 
             $grid.find('.btn-view').on('click', function (e) {
                 e.stopPropagation();
-                openPhotoModal(parseInt($(this).data('id')));
+                openPhotoModal(parseInt($(this).data('idx')));
             });
 
             $grid.find('.btn-dl').on('click', function (e) {
                 e.stopPropagation();
-                var id = parseInt($(this).data('id'));
-                WeddingDB.get(id).then(function (p) {
-                    if (!p) return;
-                    var url = URL.createObjectURL(p.blob);
-                    var a   = document.createElement('a');
-                    a.href  = url; a.download = p.name || 'photo.jpg'; a.click();
-                    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-                });
+                var p = photosList[parseInt($(this).data('idx'))];
+                if (!p) return;
+                var a = document.createElement('a');
+                a.href = rawUrl(p.src); a.download = p.src; a.target = '_blank'; a.click();
             });
 
             $grid.find('.btn-del').on('click', function (e) {
                 e.stopPropagation();
-                var id = parseInt($(this).data('id'));
-                if (confirm('Xóa ảnh này?')) {
-                    WeddingDB.remove(id).then(function () { loadPhotos(); showToast('Đã xóa ảnh.'); });
-                }
+                var idx = parseInt($(this).data('idx'));
+                var p   = photosList[idx];
+                if (!p || !confirm('Xóa ảnh "' + p.caption + '"?')) return;
+                ghDelete('assets/photos/' + p.src, p.sha, 'Delete photo: ' + p.src)
+                    .then(function () { return getPhotosJson(); })
+                    .then(function (pj) {
+                        var newList = pj.list.filter(function (x) { return x.src !== p.src; });
+                        return savePhotosJson(newList, pj.sha);
+                    })
+                    .then(function () { showToast('Đã xóa ảnh.'); loadPhotos(); })
+                    .catch(function (err) { showToast('Lỗi xóa: ' + err.message, 'warn'); });
             });
+        }).catch(function (err) {
+            $('#photoGrid').html('<p class="empty-msg">Lỗi tải ảnh: ' + escHtml(err.message) + '</p>');
         });
     }
 
     $('#clearAllPhotos').on('click', function () {
-        if (confirm('Xóa toàn bộ ảnh? Không thể khôi phục!')) {
-            WeddingDB.clear().then(function () { loadPhotos(); showToast('Đã xóa toàn bộ ảnh.'); });
-        }
+        if (!confirm('Xóa toàn bộ ảnh? Không thể khôi phục!')) return;
+        getPhotosJson().then(function (pj) {
+            if (!pj.list.length) { showToast('Không có ảnh nào.', 'warn'); return; }
+            Promise.all(pj.list.map(function (p) {
+                return ghDelete('assets/photos/' + p.src, p.sha, 'Delete photo: ' + p.src).catch(function () {});
+            })).then(function () {
+                return savePhotosJson([], pj.sha);
+            }).then(function () {
+                loadPhotos(); showToast('Đã xóa toàn bộ ảnh.');
+            }).catch(function (err) { showToast('Lỗi: ' + err.message, 'warn'); });
+        });
     });
 
     /* ===== VIEW TOGGLE (grid / list) ===== */
@@ -240,14 +362,9 @@ $(function () {
 
     /* ===== EXPORT photos.json ===== */
     $('#exportPhotosJsonBtn').on('click', function () {
-        WeddingDB.getAll().then(function (photos) {
-            if (!photos.length) { showToast('Chưa có ảnh nào để xuất.', 'warn'); return; }
-            var manifest = photos.map(function (p, i) {
-                var pad   = String(i + 1).padStart(2, '0');
-                var fname = (p.caption || 'photo_' + pad)
-                    .replace(/[^a-z0-9 _-]/gi, '_').replace(/\s+/g, '_').toLowerCase() || 'photo_' + pad;
-                return { src: fname + '.jpg', caption: p.caption || '' };
-            });
+        getPhotosJson().then(function (pj) {
+            if (!pj.list.length) { showToast('Chưa có ảnh nào để xuất.', 'warn'); return; }
+            var manifest = pj.list.map(function (p) { return { src: p.src, caption: p.caption }; });
             downloadText(JSON.stringify(manifest, null, 2), 'photos.json');
             showToast('Đã xuất photos.json!');
         });
@@ -255,43 +372,42 @@ $(function () {
 
     /* ===== DOWNLOAD TẤT CẢ ẢNH ===== */
     $('#downloadAllPhotosBtn').on('click', function () {
-        WeddingDB.getAll().then(function (photos) {
-            if (!photos.length) { showToast('Chưa có ảnh nào.', 'warn'); return; }
-            showToast('Đang tải xuống ' + photos.length + ' ảnh...');
-            photos.forEach(function (p, i) {
+        getPhotosJson().then(function (pj) {
+            if (!pj.list.length) { showToast('Chưa có ảnh nào.', 'warn'); return; }
+            showToast('Đang tải xuống ' + pj.list.length + ' ảnh...');
+            pj.list.forEach(function (p, i) {
                 setTimeout(function () {
-                    var url = URL.createObjectURL(p.blob);
-                    var a   = document.createElement('a');
-                    a.href  = url; a.download = p.name || ('photo_' + String(i+1).padStart(2,'0') + '.jpg');
-                    a.click();
-                    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-                }, i * 500);
+                    var a = document.createElement('a');
+                    a.href = rawUrl(p.src); a.download = p.src; a.target = '_blank'; a.click();
+                }, i * 600);
             });
         });
     });
 
     /* ===== PHOTO MODAL ===== */
-    function openPhotoModal(id) {
-        editingPhotoId = id;
-        WeddingDB.get(id).then(function (p) {
-            if (!p) return;
-            var url = URL.createObjectURL(p.blob);
-            $('#modalImg').attr('src', url);
-            $('#modalCaption').text(p.caption || '');
-            $('#modalCaptionInput').val(p.caption || '');
-            $('#photoModal').addClass('open');
-        });
+    function openPhotoModal(idx) {
+        editingPhotoIdx = idx;
+        var p = photosList[idx];
+        if (!p) return;
+        $('#modalImg').attr('src', rawUrl(p.src));
+        $('#modalCaption').text(p.caption || '');
+        $('#modalCaptionInput').val(p.caption || '');
+        $('#photoModal').addClass('open');
     }
 
     $('#modalClose, #modalBackdrop').on('click', function () { $('#photoModal').removeClass('open'); });
 
     $('#saveCaptionBtn').on('click', function () {
-        if (editingPhotoId === null) return;
-        WeddingDB.updateCaption(editingPhotoId, $('#modalCaptionInput').val().trim()).then(function () {
+        if (editingPhotoIdx === null) return;
+        var newCaption = $('#modalCaptionInput').val().trim();
+        getPhotosJson().then(function (pj) {
+            if (pj.list[editingPhotoIdx]) pj.list[editingPhotoIdx].caption = newCaption;
+            return savePhotosJson(pj.list, pj.sha);
+        }).then(function () {
             loadPhotos();
             $('#photoModal').removeClass('open');
             showToast('Đã lưu chú thích.');
-        });
+        }).catch(function (err) { showToast('Lỗi: ' + err.message, 'warn'); });
     });
 
     /* ============================================================
@@ -609,6 +725,23 @@ $(function () {
     /* ============================================================
        SETTINGS
     ============================================================ */
+    function loadGHSettings() {
+        $('#gh-token').val(localStorage.getItem('ghToken')  || '');
+        $('#gh-owner').val(localStorage.getItem('ghOwner')  || 'hghw');
+        $('#gh-repo').val(localStorage.getItem('ghRepo')    || 'wedding-invitation');
+        $('#gh-branch').val(localStorage.getItem('ghBranch') || 'main');
+    }
+
+    $('#ghForm').on('submit', function (e) {
+        e.preventDefault();
+        localStorage.setItem('ghToken',  $('#gh-token').val().trim());
+        localStorage.setItem('ghOwner',  $('#gh-owner').val().trim());
+        localStorage.setItem('ghRepo',   $('#gh-repo').val().trim());
+        localStorage.setItem('ghBranch', $('#gh-branch').val().trim());
+        showToast('Đã lưu cài đặt GitHub!');
+        loadPhotos();
+    });
+
     function loadSettings() {
         var cfg = JSON.parse(localStorage.getItem('weddingConfig') || '{}');
         if (cfg.bride)   $('#cfg-bride').val(cfg.bride);
@@ -617,6 +750,7 @@ $(function () {
         if (cfg.venue)   $('#cfg-venue').val(cfg.venue);
         if (cfg.address) $('#cfg-address').val(cfg.address);
         if (cfg.time)    $('#cfg-time').val(cfg.time);
+        loadGHSettings();
     }
 
     $('#coupleForm').on('submit', function (e) {
@@ -660,10 +794,8 @@ $(function () {
             ['weddingSchedule', 'weddingWishes', 'weddingRSVPs', 'weddingConfig', 'weddingHeroBg'].forEach(function (k) {
                 localStorage.removeItem(k);
             });
-            WeddingDB.clear().then(function () {
-                initAll();
-                showToast('Đã xóa toàn bộ dữ liệu.');
-            });
+            initAll();
+            showToast('Đã xóa dữ liệu cục bộ. Ảnh trên GitHub không bị ảnh hưởng.');
         } else if (msg !== null) {
             showToast('Xác nhận không đúng, không xóa.', 'warn');
         }

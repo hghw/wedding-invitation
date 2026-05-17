@@ -171,29 +171,16 @@ $(function () {
     var swiperInstance = null;
 
     function loadGallery() {
-        // Đọc ảnh từ IndexedDB (upload qua CMS — lưu dạng Blob)
-        WeddingDB.getAll().then(function (dbPhotos) {
-            var localList = dbPhotos
-                .filter(function (p) { return p && p.blob; })
-                .map(function (p) {
-                    return { url: URL.createObjectURL(p.blob), caption: p.caption || '' };
-                });
-
-            // Thử ghép thêm từ assets/photos/photos.json (ảnh đặt trực tiếp vào folder)
-            $.getJSON('assets/photos/photos.json')
-                .done(function (folderList) {
-                    var folderPhotos = (folderList || [])
-                        .filter(function (p) { return p && p.src; })
-                        .map(function (p) { return { url: 'assets/photos/' + p.src, caption: p.caption || '' }; });
-                    var all = localList.concat(folderPhotos);
-                    renderGallery(all.length ? all : defaultPhotos);
-                })
-                .fail(function () {
-                    renderGallery(localList.length ? localList : defaultPhotos);
-                });
-        }).catch(function () {
-            renderGallery(defaultPhotos);
-        });
+        $.getJSON('assets/photos/photos.json?v=' + Date.now())
+            .done(function (list) {
+                var photos = (list || [])
+                    .filter(function (p) { return p && p.src; })
+                    .map(function (p) { return { url: 'assets/photos/' + p.src, caption: p.caption || '' }; });
+                renderGallery(photos.length ? photos : defaultPhotos);
+            })
+            .fail(function () {
+                renderGallery(defaultPhotos);
+            });
     }
 
     function renderGallery(photos) {
@@ -247,7 +234,7 @@ $(function () {
         AOS.refresh();
     }
 
-    WeddingDB.migrate().then(function () { loadGallery(); }).catch(function () { loadGallery(); });
+    loadGallery();
 
     /* ============================================================
        RSVP FORM

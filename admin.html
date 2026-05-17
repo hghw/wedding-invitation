@@ -365,11 +365,44 @@
                     </form>
                 </div>
 
+                <!-- GITHUB TOKEN -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3><i class="fab fa-github"></i> GitHub Token</h3>
+                    </div>
+                    <p style="margin-bottom:12px;color:#9a8a9a;font-size:0.9rem">
+                        Cần để upload ảnh lên repo. Tạo tại <strong>GitHub → Settings → Developer settings → Personal access tokens → Fine-grained</strong>, cấp quyền <code>Contents: Read &amp; Write</code>.
+                    </p>
+                    <form id="ghForm" class="schedule-form">
+                        <div class="form-row-3">
+                            <div class="form-group">
+                                <label>Owner (tên tài khoản)</label>
+                                <input type="text" id="gh-owner" placeholder="hghw">
+                            </div>
+                            <div class="form-group">
+                                <label>Repository</label>
+                                <input type="text" id="gh-repo" placeholder="wedding-invitation">
+                            </div>
+                            <div class="form-group">
+                                <label>Branch</label>
+                                <input type="text" id="gh-branch" placeholder="main">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Personal Access Token</label>
+                            <input type="password" id="gh-token" placeholder="github_pat_...">
+                        </div>
+                        <button type="submit" class="btn-primary-sm">
+                            <i class="fas fa-save"></i> Lưu Cài Đặt GitHub
+                        </button>
+                    </form>
+                </div>
+
                 <div class="content-card danger-zone">
                     <div class="card-header">
                         <h3><i class="fas fa-triangle-exclamation"></i> Vùng Nguy Hiểm</h3>
                     </div>
-                    <p>Xóa toàn bộ dữ liệu (ảnh, lời chúc, xác nhận, lịch trình) — không thể khôi phục.</p>
+                    <p>Xóa toàn bộ dữ liệu (lời chúc, xác nhận, lịch trình) — không thể khôi phục.</p>
                     <button class="btn-danger" id="nukeBtn">
                         <i class="fas fa-bomb"></i> Xóa Toàn Bộ Dữ Liệu
                     </button>
