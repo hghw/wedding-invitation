@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thiệp Cưới - Minh Anh &amp; Quốc Huy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/css/lightbox.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Music Toggle -->
+    <button class="music-btn" id="musicToggle" title="Bật/Tắt nhạc">
+        <i class="fas fa-music" id="musicIcon"></i>
+        <span class="music-ripple"></span>
+    </button>
+
+    <!-- Audio -->
+    <audio id="bgMusic" loop>
+        <source src="assets/music/wedding.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Floating Effects Container -->
+    <div id="effectsContainer" aria-hidden="true"></div>
+
+    <!-- ===== SECTION 1: HERO ===== -->
+    <section class="hero-section" id="hero">
+        <div class="hero-bg">
+            <img id="heroBgImg"
+                 src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=1920&q=85"
+                 alt="Wedding Background"
+                 fetchpriority="high">
+        </div>
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <p class="invite-label">✦ Trân Trọng Kính Mời ✦</p>
+            <div class="couple-names">
+                <span class="bride-name">Minh Anh</span>
+                <div class="heart-center">
+                    <span class="heart-icon">♥</span>
+                </div>
+                <span class="groom-name">Quốc Huy</span>
+            </div>
+            <p class="wedding-sub">Trân trọng kính mời Quý vị đến tham dự hôn lễ của chúng tôi</p>
+            <div class="wedding-date-display">
+                <div class="date-box">
+                    <span class="date-day">Thứ Hai</span>
+                    <span class="date-num">15</span>
+                    <span class="date-month">Tháng 6</span>
+                    <span class="date-year">2026</span>
+                </div>
+            </div>
+
+            <!-- Countdown -->
+            <div class="countdown-wrap" id="countdownWrap">
+                <div class="countdown-item">
+                    <span class="countdown-num" id="days">00</span>
+                    <span class="countdown-label">Ngày</span>
+                </div>
+                <div class="countdown-sep">:</div>
+                <div class="countdown-item">
+                    <span class="countdown-num" id="hours">00</span>
+                    <span class="countdown-label">Giờ</span>
+                </div>
+                <div class="countdown-sep">:</div>
+                <div class="countdown-item">
+                    <span class="countdown-num" id="minutes">00</span>
+                    <span class="countdown-label">Phút</span>
+                </div>
+                <div class="countdown-sep">:</div>
+                <div class="countdown-item">
+                    <span class="countdown-num" id="seconds">00</span>
+                    <span class="countdown-label">Giây</span>
+                </div>
+            </div>
+
+            <a href="#venue" class="scroll-down-btn">
+                <i class="fas fa-chevron-down"></i>
+            </a>
+        </div>
+    </section>
+
+    <!-- ===== SECTION 2: VENUE & MAP ===== -->
+    <section class="section venue-section" id="venue">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <div class="floral-divider">🌸 ✿ 🌸</div>
+                <h2 class="section-title">Ngày &amp; Địa Điểm</h2>
+                <p class="section-sub">Sự hiện diện của Quý vị là niềm vinh dự lớn lao</p>
+                <div class="floral-divider">🌸 ✿ 🌸</div>
+            </div>
+
+            <div class="info-cards" data-aos="fade-up" data-aos-delay="100">
+                <div class="info-card">
+                    <div class="info-icon"><i class="fas fa-calendar-days"></i></div>
+                    <h3>Ngày Cưới</h3>
+                    <p>Thứ Hai</p>
+                    <p class="info-highlight">15 / 06 / 2026</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon"><i class="fas fa-location-dot"></i></div>
+                    <h3>Địa Điểm</h3>
+                    <p>Nhà Hàng Tiệc Cưới</p>
+                    <p class="info-highlight">Royal Palace</p>
+                    <p class="info-small">123 Đường Nguyễn Huệ, Q.1, TP.HCM</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon"><i class="fas fa-clock"></i></div>
+                    <h3>Thời Gian</h3>
+                    <p>Lễ Thành Hôn: <strong>11:00</strong></p>
+                    <p class="info-highlight">Khai Tiệc: 18:00</p>
+                </div>
+            </div>
+
+            <div class="map-wrapper" data-aos="fade-up" data-aos-delay="200">
+                <div id="map"></div>
+                <div class="map-actions">
+                    <a href="https://maps.google.com/?q=10.776889,106.700806" target="_blank" rel="noopener" class="btn-map">
+                        <i class="fas fa-diamond-turn-right"></i> Chỉ Đường Google Maps
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== SECTION 3: TIMELINE ===== -->
+    <section class="section timeline-section" id="timeline">
+        <div class="timeline-bg"></div>
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <div class="floral-divider">🌸 ✿ 🌸</div>
+                <h2 class="section-title">Chương Trình</h2>
+                <p class="section-sub">Hành trình của ngày trọng đại</p>
+                <div class="floral-divider">🌸 ✿ 🌸</div>
+            </div>
+
+            <div class="timeline" id="timelineContainer">
+                <!-- Loaded by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== SECTION 4: GALLERY ===== -->
+    <section class="section gallery-section" id="gallery">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <div class="floral-divider">🌸 ✿ 🌸</div>
+                <h2 class="section-title">Khoảnh Khắc Đáng Nhớ</h2>
+                <p class="section-sub">Những khoảnh khắc yêu thương</p>
+                <div class="floral-divider">🌸 ✿ 🌸</div>
+            </div>
+
+            <!-- Slider nổi bật -->
+            <div class="swiper gallery-swiper" data-aos="fade-up" data-aos-delay="100">
+                <div class="swiper-wrapper" id="galleryWrapper">
+                    <!-- Loaded by JS -->
+                </div>
+                <div class="swiper-pagination"></div>
+                <div class="swiper-button-prev"></div>
+                <div class="swiper-button-next"></div>
+            </div>
+
+            <!-- Tường ảnh — toàn bộ album -->
+            <div class="photo-wall-header" id="photoWallHeader" style="display:none" data-aos="fade-up">
+                <div class="floral-divider" style="margin-top:60px">🌸 ✿ 🌸</div>
+                <h3 class="pw-title">Toàn Bộ Album</h3>
+            </div>
+            <div class="photo-wall" id="photoWall"></div>
+        </div>
+    </section>
+
+    <!-- ===== SECTION 5: RSVP ===== -->
+    <section class="section rsvp-section" id="rsvp">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <div class="floral-divider">🌸 ✿ 🌸</div>
+                <h2 class="section-title">Xác Nhận Tham Dự</h2>
+                <p class="section-sub">Vui lòng xác nhận trước ngày <strong>01/06/2026</strong></p>
+                <div class="floral-divider">🌸 ✿ 🌸</div>
+            </div>
+
+            <div class="form-container" data-aos="fade-up" data-aos-delay="100">
+                <form class="wedding-form" id="rsvpForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Họ và tên</label>
+                            <input type="text" id="rsvpName" placeholder="Nhập họ và tên của bạn" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-phone"></i> Số điện thoại</label>
+                            <input type="tel" id="rsvpPhone" placeholder="Nhập số điện thoại">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-circle-question"></i> Tham dự</label>
+                            <select id="rsvpAttend" required>
+                                <option value="">-- Vui lòng chọn --</option>
+                                <option value="yes">✅ Vâng, tôi sẽ tham dự</option>
+                                <option value="no">❌ Rất tiếc, tôi không thể đến</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="guestCountGroup">
+                            <label><i class="fas fa-users"></i> Số người tham dự</label>
+                            <select id="rsvpGuests">
+                                <option value="1">1 người</option>
+                                <option value="2">2 người</option>
+                                <option value="3">3 người</option>
+                                <option value="4">4 người trở lên</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-comment"></i> Ghi chú (tuỳ chọn)</label>
+                        <textarea id="rsvpNote" placeholder="Dị ứng thực phẩm, yêu cầu đặc biệt..." rows="2"></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-heart"></i> Gửi Xác Nhận
+                    </button>
+                </form>
+
+                <div class="success-box" id="rsvpSuccess" style="display:none">
+                    <div class="success-icon">💕</div>
+                    <h3>Cảm ơn bạn đã xác nhận!</h3>
+                    <p>Chúng tôi rất mong được gặp bạn trong ngày trọng đại này.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== SECTION 6: WISHES ===== -->
+    <section class="section wishes-section" id="wishes">
+        <div class="wishes-bg"></div>
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <div class="floral-divider">🌸 ✿ 🌸</div>
+                <h2 class="section-title">Gửi Lời Chúc</h2>
+                <p class="section-sub">Hãy gửi những lời chúc tốt đẹp đến cô dâu và chú rể</p>
+                <div class="floral-divider">🌸 ✿ 🌸</div>
+            </div>
+
+            <div class="wishes-layout">
+                <div class="wishes-form-wrap" data-aos="fade-right" data-aos-delay="100">
+                    <form class="wedding-form" id="wishesForm">
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Tên của bạn</label>
+                            <input type="text" id="wishName" placeholder="Nhập tên của bạn" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-heart"></i> Lời chúc</label>
+                            <textarea id="wishMessage" placeholder="Viết lời chúc yêu thương..." rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-paper-plane"></i> Gửi Lời Chúc
+                        </button>
+                    </form>
+                </div>
+
+                <div class="wishes-display" data-aos="fade-left" data-aos-delay="200">
+                    <div class="wishes-list" id="wishesList">
+                        <p class="empty-msg">Hãy là người đầu tiên gửi lời chúc! 💕</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== SECTION 7: GIFT / QR ===== -->
+    <section class="section gift-section" id="gift">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <div class="floral-divider">🌸 ✿ 🌸</div>
+                <h2 class="section-title">Hộp Mừng Cưới</h2>
+                <p class="section-sub">Sự hiện diện của bạn là món quà quý giá nhất với chúng tôi 💝</p>
+                <div class="floral-divider">🌸 ✿ 🌸</div>
+            </div>
+
+            <div class="gift-cards" data-aos="fade-up" data-aos-delay="100">
+                <div class="gift-card">
+                    <div class="gift-header bride">
+                        <i class="fas fa-heart"></i>
+                        <h3>Cô Dâu</h3>
+                        <p>Trần Minh Anh</p>
+                    </div>
+                    <div class="qr-wrap">
+                        <img src="assets/images/qr-bride.png" alt="QR Cô Dâu" class="qr-img"
+                             onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=00020101021238570010A000000727012700069704220113+842396741200208QRIBFTTA53037045405500005802VN5912TRAN%20MINH%20ANH6005HANOI6304C3A4'">
+                    </div>
+                    <div class="bank-details">
+                        <div class="bank-row"><span>Ngân hàng</span><strong>Vietcombank</strong></div>
+                        <div class="bank-row"><span>Số tài khoản</span><strong>1234567890</strong></div>
+                        <div class="bank-row"><span>Chủ tài khoản</span><strong>TRAN MINH ANH</strong></div>
+                    </div>
+                </div>
+
+                <div class="gift-divider">
+                    <span>💑</span>
+                </div>
+
+                <div class="gift-card">
+                    <div class="gift-header groom">
+                        <i class="fas fa-heart"></i>
+                        <h3>Chú Rể</h3>
+                        <p>Nguyễn Quốc Huy</p>
+                    </div>
+                    <div class="qr-wrap">
+                        <img src="assets/images/qr-groom.png" alt="QR Chú Rể" class="qr-img"
+                             onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=00020101021238570010A000000727012700069704220113+842396741200208QRIBFTTA53037045405500005802VN5913NGUYEN%20QUOC%20HUY6005HANOI6304A1B2'">
+                    </div>
+                    <div class="bank-details">
+                        <div class="bank-row"><span>Ngân hàng</span><strong>Techcombank</strong></div>
+                        <div class="bank-row"><span>Số tài khoản</span><strong>0987654321</strong></div>
+                        <div class="bank-row"><span>Chủ tài khoản</span><strong>NGUYEN QUOC HUY</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== SECTION 8: THANK YOU ===== -->
+    <section class="thanks-section" id="thanks">
+        <div class="thanks-overlay"></div>
+        <div class="thanks-content" data-aos="zoom-in">
+            <div class="floral-divider white">🌸 ✿ 🌸</div>
+            <h2 class="thanks-title">Trân Trọng Cảm Ơn</h2>
+            <div class="thanks-divider"></div>
+            <p class="thanks-text">Cảm ơn Quý vị đã ghé thăm thiệp cưới của chúng tôi</p>
+            <p class="thanks-text">Sự hiện diện của Quý vị là niềm hạnh phúc lớn lao nhất</p>
+            <div class="couple-signature">
+                <span class="sig-name bride-sig">Minh Anh</span>
+                <span class="sig-heart">♥</span>
+                <span class="sig-name groom-sig">Quốc Huy</span>
+            </div>
+            <div class="floral-divider white">🌸 ✿ 🌸</div>
+            <p class="admin-link-wrap">
+                <a href="admin.html" class="admin-link">
+                    <i class="fas fa-lock"></i> Quản lý
+                </a>
+            </p>
+        </div>
+    </section>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/js/lightbox.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/effects.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

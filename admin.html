@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Thiệp Cưới — CMS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+    <!-- ===== LOGIN SCREEN ===== -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-card">
+            <div class="login-logo">💒</div>
+            <h2>Quản Lý Thiệp Cưới</h2>
+            <p>Vui lòng nhập mật khẩu để tiếp tục</p>
+            <form id="loginForm">
+                <div class="login-field">
+                    <input type="password" id="loginPass" placeholder="Mật khẩu" autocomplete="current-password">
+                    <button type="submit"><i class="fas fa-arrow-right"></i></button>
+                </div>
+                <p class="login-hint">Mật khẩu mặc định: <code>admin123</code></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== ADMIN PANEL ===== -->
+    <div id="adminPanel" style="display:none">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <span class="brand-icon">💒</span>
+                <div>
+                    <h1>Wedding CMS</h1>
+                    <p>Minh Anh &amp; Quốc Huy</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-tab="photos">
+                    <i class="fas fa-images"></i> <span>Ảnh Cưới</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="schedule">
+                    <i class="fas fa-calendar-check"></i> <span>Chương Trình</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="wishes">
+                    <i class="fas fa-heart"></i> <span>Lời Chúc</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="rsvps">
+                    <i class="fas fa-users"></i> <span>Xác Nhận Dự</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="settings">
+                    <i class="fas fa-gear"></i> <span>Cài Đặt</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="index.html" target="_blank" class="btn-preview">
+                    <i class="fas fa-eye"></i> Xem Thiệp
+                </a>
+                <button class="btn-logout" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> Đăng Xuất
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h2 id="pageTitle">Quản Lý Ảnh Cưới</h2>
+                <div class="top-actions">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Đã lưu</span>
+                </div>
+            </header>
+
+            <!-- ===== TAB: PHOTOS ===== -->
+            <div class="tab-content active" id="tab-photos">
+
+                <!-- Folder info banner -->
+                <div class="folder-banner">
+                    <div class="folder-banner-icon"><i class="fas fa-folder-open"></i></div>
+                    <div class="folder-banner-body">
+                        <strong>Thư mục ảnh:</strong>
+                        <code>assets/photos/</code>
+                        <span class="folder-sep">|</span>
+                        <strong>Manifest:</strong>
+                        <code>assets/photos/photos.json</code>
+                    </div>
+                    <div class="folder-banner-actions">
+                        <button class="btn-success-sm" id="exportPhotosJsonBtn">
+                            <i class="fas fa-file-code"></i> Xuất photos.json
+                        </button>
+                        <button class="btn-secondary-sm" id="downloadAllPhotosBtn">
+                            <i class="fas fa-file-zipper"></i> Tải xuống ảnh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Upload card -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-upload"></i> Tải Ảnh Lên</h3>
+                        <span class="hint-text"><i class="fas fa-circle-info"></i> Ảnh lưu vào bộ nhớ trình duyệt — dùng "Xuất photos.json" để đồng bộ ra folder</span>
+                    </div>
+                    <div class="upload-zone" id="uploadZone">
+                        <input type="file" id="photoInput" multiple accept="image/*" style="display:none">
+                        <label for="photoInput" class="upload-zone-label">
+                            <i class="fas fa-cloud-arrow-up"></i>
+                            <p>Kéo thả ảnh vào đây hoặc <span class="upload-link">chọn từ máy tính</span></p>
+                            <small>Hỗ trợ: JPG · PNG · WEBP — Tối đa 5MB/ảnh — Không giới hạn số lượng</small>
+                        </label>
+                    </div>
+                    <div id="uploadProgress" style="display:none" class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <!-- Gallery management card -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-images"></i> Thư Viện Ảnh</h3>
+                        <div class="card-actions">
+                            <span class="photo-count" id="photoCount">0 ảnh</span>
+                            <div class="view-toggle">
+                                <button class="view-btn active" id="viewGrid" title="Lưới lớn"><i class="fas fa-th-large"></i></button>
+                                <button class="view-btn" id="viewList" title="Danh sách"><i class="fas fa-list"></i></button>
+                            </div>
+                            <button class="btn-danger-sm" id="clearAllPhotos">
+                                <i class="fas fa-trash"></i> Xóa Tất Cả
+                            </button>
+                        </div>
+                    </div>
+                    <div class="photo-grid" id="photoGrid">
+                        <p class="empty-msg">Chưa có ảnh nào. Hãy tải ảnh lên!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== TAB: SCHEDULE ===== -->
+            <div class="tab-content" id="tab-schedule">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-plus"></i> Thêm Công Đoạn</h3>
+                    </div>
+                    <form id="scheduleForm" class="schedule-form">
+                        <div class="form-row-3">
+                            <div class="form-group">
+                                <label>Giờ</label>
+                                <input type="time" id="sch-time" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Tên Công Đoạn</label>
+                                <input type="text" id="sch-title" placeholder="VD: Lễ Đón Dâu" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Biểu Tượng (Font Awesome)</label>
+                                <input type="text" id="sch-icon" placeholder="fa-heart" value="fa-heart">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Mô Tả</label>
+                            <textarea id="sch-desc" rows="2" placeholder="Mô tả chi tiết công đoạn..."></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary-sm" id="scheduleSubmitBtn">
+                                <i class="fas fa-plus"></i> Thêm Công Đoạn
+                            </button>
+                            <button type="button" class="btn-secondary-sm" id="scheduleCancelEdit" style="display:none">
+                                <i class="fas fa-times"></i> Huỷ Sửa
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-list"></i> Danh Sách Chương Trình</h3>
+                        <button class="btn-secondary-sm" id="resetScheduleBtn">
+                            <i class="fas fa-rotate-left"></i> Đặt Lại Mặc Định
+                        </button>
+                    </div>
+                    <div id="scheduleList" class="schedule-list"></div>
+                </div>
+            </div>
+
+            <!-- ===== TAB: WISHES ===== -->
+            <div class="tab-content" id="tab-wishes">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-heart"></i> Lời Chúc Nhận Được</h3>
+                        <div class="card-actions">
+                            <span class="wish-count-label" id="wishCountLabel">0 lời chúc</span>
+                            <button class="btn-success-sm" id="exportWishesBtn">
+                                <i class="fas fa-download"></i> Xuất .TXT
+                            </button>
+                            <button class="btn-danger-sm" id="clearWishesBtn">
+                                <i class="fas fa-trash"></i> Xóa Tất Cả
+                            </button>
+                        </div>
+                    </div>
+                    <div class="wishes-table-wrap">
+                        <table class="data-table" id="wishesTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px">#</th>
+                                    <th style="width:150px">Tên</th>
+                                    <th>Lời Chúc</th>
+                                    <th style="width:140px">Thời Gian</th>
+                                    <th style="width:60px">Xóa</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wishesTableBody">
+                                <tr><td colspan="5" class="empty-msg">Chưa có lời chúc nào.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== TAB: RSVPs ===== -->
+            <div class="tab-content" id="tab-rsvps">
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-users"></i> Danh Sách Xác Nhận Tham Dự</h3>
+                        <div class="card-actions">
+                            <span id="rsvpStats"></span>
+                            <button class="btn-success-sm" id="exportRsvpBtn">
+                                <i class="fas fa-download"></i> Xuất .TXT
+                            </button>
+                            <button class="btn-danger-sm" id="clearRsvpBtn">
+                                <i class="fas fa-trash"></i> Xóa Tất Cả
+                            </button>
+                        </div>
+                    </div>
+                    <div class="rsvp-summary" id="rsvpSummary"></div>
+                    <div class="wishes-table-wrap">
+                        <table class="data-table" id="rsvpTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px">#</th>
+                                    <th style="width:160px">Tên</th>
+                                    <th style="width:130px">Điện Thoại</th>
+                                    <th style="width:100px">Tham Dự</th>
+                                    <th style="width:80px">Số Người</th>
+                                    <th>Ghi Chú</th>
+                                    <th style="width:140px">Thời Gian</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rsvpTableBody">
+                                <tr><td colspan="7" class="empty-msg">Chưa có xác nhận nào.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== TAB: SETTINGS ===== -->
+            <div class="tab-content" id="tab-settings">
+
+                <!-- HERO BACKGROUND PHOTO -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-image"></i> Ảnh Nền Trang Chủ (Hero)</h3>
+                        <div class="card-actions">
+                            <button class="btn-danger-sm" id="resetHeroBgBtn">
+                                <i class="fas fa-rotate-left"></i> Dùng Ảnh Mặc Định
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="hero-upload-wrap">
+                        <!-- Preview -->
+                        <div class="hero-preview-box" id="heroBgPreview">
+                            <img id="heroBgPreviewImg"
+                                 src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800&q=75"
+                                 alt="Hero Preview">
+                            <div class="hero-preview-label">Ảnh nền hiện tại</div>
+                        </div>
+
+                        <!-- Upload -->
+                        <div class="hero-upload-side">
+                            <p class="hero-upload-hint">
+                                <i class="fas fa-circle-info"></i>
+                                Tải ảnh cô dâu chú rể chụp cùng nhau — ảnh nằm ngang, độ phân giải cao (1920×1080 trở lên) sẽ đẹp nhất.
+                            </p>
+                            <input type="file" id="heroBgInput" accept="image/*" style="display:none">
+                            <label for="heroBgInput" class="btn-primary-sm" style="cursor:pointer">
+                                <i class="fas fa-upload"></i> Chọn Ảnh Từ Máy Tính
+                            </label>
+                            <p class="hero-upload-note">Tối đa 8MB · JPG / PNG / WEBP</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-user-gear"></i> Thông Tin Cô Dâu Chú Rể</h3>
+                    </div>
+                    <form id="coupleForm" class="schedule-form">
+                        <div class="form-row-3">
+                            <div class="form-group">
+                                <label>Tên Cô Dâu</label>
+                                <input type="text" id="cfg-bride" placeholder="Minh Anh">
+                            </div>
+                            <div class="form-group">
+                                <label>Tên Chú Rể</label>
+                                <input type="text" id="cfg-groom" placeholder="Quốc Huy">
+                            </div>
+                            <div class="form-group">
+                                <label>Ngày Cưới</label>
+                                <input type="date" id="cfg-date" value="2026-06-15">
+                            </div>
+                        </div>
+                        <div class="form-row-3">
+                            <div class="form-group">
+                                <label>Địa Điểm (Tên Nhà Hàng)</label>
+                                <input type="text" id="cfg-venue" placeholder="Royal Palace">
+                            </div>
+                            <div class="form-group">
+                                <label>Địa Chỉ</label>
+                                <input type="text" id="cfg-address" placeholder="123 Nguyễn Huệ, Q.1">
+                            </div>
+                            <div class="form-group">
+                                <label>Giờ Khai Tiệc</label>
+                                <input type="time" id="cfg-time" value="18:00">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary-sm">
+                            <i class="fas fa-save"></i> Lưu Cài Đặt
+                        </button>
+                    </form>
+                </div>
+
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-lock"></i> Đổi Mật Khẩu</h3>
+                    </div>
+                    <form id="passForm" class="schedule-form">
+                        <div class="form-row-3">
+                            <div class="form-group">
+                                <label>Mật Khẩu Hiện Tại</label>
+                                <input type="password" id="pw-current" placeholder="Nhập mật khẩu hiện tại">
+                            </div>
+                            <div class="form-group">
+                                <label>Mật Khẩu Mới</label>
+                                <input type="password" id="pw-new" placeholder="Mật khẩu mới">
+                            </div>
+                            <div class="form-group">
+                                <label>Xác Nhận Mật Khẩu Mới</label>
+                                <input type="password" id="pw-confirm" placeholder="Nhập lại mật khẩu mới">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary-sm">
+                            <i class="fas fa-key"></i> Đổi Mật Khẩu
+                        </button>
+                    </form>
+                </div>
+
+                <div class="content-card danger-zone">
+                    <div class="card-header">
+                        <h3><i class="fas fa-triangle-exclamation"></i> Vùng Nguy Hiểm</h3>
+                    </div>
+                    <p>Xóa toàn bộ dữ liệu (ảnh, lời chúc, xác nhận, lịch trình) — không thể khôi phục.</p>
+                    <button class="btn-danger" id="nukeBtn">
+                        <i class="fas fa-bomb"></i> Xóa Toàn Bộ Dữ Liệu
+                    </button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Photo Detail Modal -->
+    <div class="modal" id="photoModal">
+        <div class="modal-backdrop" id="modalBackdrop"></div>
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose"><i class="fas fa-times"></i></button>
+            <img id="modalImg" src="" alt="Photo Detail">
+            <div class="modal-caption" id="modalCaption"></div>
+            <div class="modal-edit">
+                <input type="text" id="modalCaptionInput" placeholder="Chú thích ảnh...">
+                <button id="saveCaptionBtn" class="btn-primary-sm">
+                    <i class="fas fa-save"></i> Lưu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="admin-toast" id="adminToast"></div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

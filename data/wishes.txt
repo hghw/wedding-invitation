@@ -1,0 +1,4 @@
+=== LỜI CHÚC MỪNG ĐÁM CƯỚI ===
+File này được xuất từ trang quản lý CMS.
+Các lời chúc được lưu trữ trong localStorage của trình duyệt.
+Sử dụng nút "Xuất .TXT" trong trang admin để tạo file lời chúc.
