@@ -214,39 +214,45 @@ $(function () {
         $('#uploadProgress').show();
         $('#progressFill').css('width', '0%');
 
-        // Upload tuần tự để tránh race condition khi cập nhật photos.json
-        function uploadNext(idx) {
-            if (idx >= valid.length) {
-                setTimeout(function () { $('#uploadProgress').hide(); }, 500);
-                loadPhotos();
-                showToast('Đã tải lên ' + done + ' ảnh!');
-                return;
-            }
-            var file  = valid[idx];
-            var ts    = Date.now();
-            var ext   = (file.name.split('.').pop() || 'jpg').toLowerCase();
-            var base  = sanitizeFilename(file.name.replace(/\.[^/.]+$/, ''));
-            var fname = base + '_' + ts + '.' + ext;
+        // Fetch photos.json một lần, truyền SHA qua từng vòng để tránh 409 Conflict
+        getPhotosJson().then(function (pj) {
+            var currentList = pj.list.slice();
+            var currentSha  = pj.sha;
 
-            fileToBase64(file).then(function (b64) {
-                return ghPut('assets/photos/' + fname, b64, 'Upload photo: ' + fname);
-            }).then(function (res) {
-                var fileSha = res.content.sha;
-                return getPhotosJson().then(function (pj) {
-                    var newList = pj.list.concat([{ src: fname, caption: file.name.replace(/\.[^/.]+$/, ''), sha: fileSha }]);
-                    return savePhotosJson(newList, pj.sha);
+            function uploadNext(idx) {
+                if (idx >= valid.length) {
+                    setTimeout(function () { $('#uploadProgress').hide(); }, 500);
+                    loadPhotos();
+                    showToast('Đã tải lên ' + done + ' ảnh!');
+                    return;
+                }
+                var file  = valid[idx];
+                var ts    = Date.now();
+                var ext   = (file.name.split('.').pop() || 'jpg').toLowerCase();
+                var base  = sanitizeFilename(file.name.replace(/\.[^/.]+$/, ''));
+                var fname = base + '_' + ts + '.' + ext;
+
+                fileToBase64(file).then(function (b64) {
+                    return ghPut('assets/photos/' + fname, b64, 'Upload photo: ' + fname);
+                }).then(function (res) {
+                    currentList.push({ src: fname, caption: file.name.replace(/\.[^/.]+$/, ''), sha: res.content.sha });
+                    return savePhotosJson(currentList, currentSha);
+                }).then(function (newSha) {
+                    currentSha = newSha; // dùng SHA mới cho lần tiếp theo
+                    done++;
+                    $('#progressFill').css('width', Math.round((idx + 1) / total * 100) + '%');
+                    uploadNext(idx + 1);
+                }).catch(function (err) {
+                    showToast('Lỗi upload ' + file.name + ': ' + err.message, 'warn');
+                    uploadNext(idx + 1);
                 });
-            }).then(function () {
-                done++;
-                $('#progressFill').css('width', Math.round((idx + 1) / total * 100) + '%');
-                uploadNext(idx + 1);
-            }).catch(function (err) {
-                showToast('Lỗi upload ' + file.name + ': ' + err.message, 'warn');
-                uploadNext(idx + 1);
-            });
-        }
+            }
 
-        uploadNext(0);
+            uploadNext(0);
+        }).catch(function (err) {
+            $('#uploadProgress').hide();
+            showToast('Không đọc được photos.json: ' + err.message, 'warn');
+        });
     }
 
     /* ---- Hiển thị thư viện ảnh ---- */
